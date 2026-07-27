@@ -37,13 +37,6 @@ Both names are the **Anthropic SDK's own environment variables** — a zero-argu
 `anthropic.Anthropic()` reads them without help. Nothing here renames or wraps them,
 which is why porting an existing `.env` needed no translation.
 
-## Why python-dotenv is in the dependency list
-
-The SDK reads the *process environment*. Python does not load `.env` files into that
-environment on its own — unlike Node, where tooling often does it implicitly. So
-`python-dotenv` is the bridge, and without it a populated `.env` would simply be
-invisible to the SDK.
-
 ## Precedence
 
 `load_dotenv(..., override=False)` means **an already-exported variable wins over the

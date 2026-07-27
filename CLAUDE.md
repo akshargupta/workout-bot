@@ -16,31 +16,6 @@ before handing work back.
 Always go through `uv run`; a bare `pytest` misses the project install and fails to
 import `workout_bot`.
 
-## Environment
-
-Python 3.14.5, pinned in `.python-version` and managed by [uv](https://docs.astral.sh/uv/).
-
-Configuration lives in `.env` (gitignored, never committed) — copy `.env.example` and
-fill it in. Two variables, both read by [workout_bot.config](src/workout_bot/config.py):
-
-| Variable | Required | Meaning |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | yes | Claude API key |
-| `ANTHROPIC_BASE_URL` | no | API endpoint; empty means the public Claude API |
-
-Both are the Anthropic SDK's own environment variables. See
-[wiki/configuration.md](wiki/configuration.md) for how loading and precedence work.
-
-Two gotchas that look like bugs and are not:
-
-- **An exported shell variable beats `.env`.** Deliberate — it lets CI and one-off
-  overrides work without editing the file. If a call goes somewhere unexpected, check
-  `echo $ANTHROPIC_BASE_URL` before suspecting `.env`.
-- **Blank is not the same as a value.** `load_config()` deletes a blank
-  `ANTHROPIC_BASE_URL` from the environment so the SDK's own default applies. Do not
-  "simplify" that away — the SDK reads an empty string as a real endpoint and the client
-  then fails every request.
-
 ## Knowledge base — OKF wiki
 
 `wiki/` is the project's knowledge base — one curated concept per markdown file,

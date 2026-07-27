@@ -5,8 +5,6 @@ The Anthropic SDK reads ``ANTHROPIC_API_KEY`` and ``ANTHROPIC_BASE_URL`` from th
 its own, so ``python-dotenv`` bridges the gap here.
 """
 
-from __future__ import annotations
-
 import os
 from dataclasses import dataclass
 
