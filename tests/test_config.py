@@ -19,11 +19,28 @@ from workout_bot.config import (
 SECRET = "sk-ant-test-do-not-log-me"
 
 
+@pytest.fixture(autouse=True)
+def _isolated_env(monkeypatch):
+    """Start every test with both variables truly unset, and restore afterwards.
+
+    autouse, because `load_config` writes into `os.environ` and the tests that
+    never touch a .env file (the `build_client` ones) would otherwise read
+    whatever a previous test — or the developer's shell — left behind.
+
+    `delenv(raising=False)` alone is not enough: monkeypatch records an undo
+    entry only when the variable was already present, so on a machine where
+    these are unset it records nothing and values written during the test
+    survive teardown. Setting first forces the prior state (including absence)
+    to be recorded, then deleting gives a clean start.
+    """
+    for var in ("ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"):
+        monkeypatch.setenv(var, "")
+        monkeypatch.delenv(var)
+
+
 @pytest.fixture
-def env_file(tmp_path, monkeypatch):
-    """Write a .env into tmp_path with both vars cleared from the real environment."""
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+def env_file(tmp_path):
+    """Write a .env into tmp_path and return its path."""
 
     def _write(text: str) -> str:
         path = tmp_path / ".env"
@@ -111,4 +128,32 @@ def test_client_omits_base_url_when_none():
 # AC 12 — base_url passed through when set
 def test_client_passes_base_url_through():
     client = build_client(Config(api_key=SECRET, base_url="https://gw.example.com"))
+    assert "gw.example.com" in str(client.base_url)
+
+
+# AC 10 + AC 12 — regression: the documented onboarding path, end to end.
+# .env.example ships `ANTHROPIC_BASE_URL=` and says to leave it blank for the
+# public API. Going through load_config -> build_client must therefore produce
+# the real default, not a client pointed at "". The two tests above construct
+# Config directly and so cannot catch this.
+def test_blank_base_url_in_env_file_yields_sdk_default(env_file):
+    path = env_file(f"ANTHROPIC_API_KEY={SECRET}\nANTHROPIC_BASE_URL=\n")
+    client = build_client(load_config(path))
+    assert "api.anthropic.com" in str(client.base_url)
+    assert str(client.base_url) != ""
+
+
+# AC 10 + AC 12 — same path, whitespace-only value
+def test_whitespace_base_url_in_env_file_yields_sdk_default(env_file):
+    path = env_file(f'ANTHROPIC_API_KEY={SECRET}\nANTHROPIC_BASE_URL="   "\n')
+    client = build_client(load_config(path))
+    assert "api.anthropic.com" in str(client.base_url)
+
+
+# AC 10 + AC 12 — a real value in the file still reaches the client
+def test_real_base_url_in_env_file_reaches_client(env_file):
+    path = env_file(
+        f"ANTHROPIC_API_KEY={SECRET}\nANTHROPIC_BASE_URL=https://gw.example.com\n"
+    )
+    client = build_client(load_config(path))
     assert "gw.example.com" in str(client.base_url)

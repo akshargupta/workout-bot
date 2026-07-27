@@ -92,13 +92,25 @@ def load_config(env_file: str | os.PathLike[str] | None = None) -> Config:
             "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and fill it in."
         )
     base_url = (os.environ.get("ANTHROPIC_BASE_URL") or "").strip() or None  # AC 10
+    if base_url is None:
+        os.environ.pop("ANTHROPIC_BASE_URL", None)   # see divergence note below
     return Config(api_key=api_key, base_url=base_url)
 
 def build_client(config: Config) -> anthropic.Anthropic:   # AC 12
-    if config.base_url is None:
-        return anthropic.Anthropic(api_key=config.api_key)
     return anthropic.Anthropic(api_key=config.api_key, base_url=config.base_url)
 ```
+
+> **Divergence found during implementation (code review, blocker B2).** This plan
+> originally had `build_client` branch on `base_url is None` and omit the argument, on
+> the assumption that omitting it lets the SDK apply its own default. Both halves were
+> wrong. `anthropic/_client.py` does `if base_url is None: base_url = os.environ.get(...)`
+> — so passing `None` is *identical* to omitting it (the branch bought nothing), and
+> because `load_dotenv` has already written a blank `ANTHROPIC_BASE_URL=` line into
+> `os.environ`, `os.environ.get(...)` returns `""`, which is not `None`, so the hardcoded
+> default is never reached. Following `.env.example`'s "leave it empty" instruction
+> produced a client with `base_url=''` that failed every request. Fixed by deleting the
+> blank variable in `load_config` so the environment agrees with the returned `Config`,
+> and dropping the pointless branch. Tests 12–14 in tests.md are the regression.
 
 Two details that carry the design:
 
@@ -126,8 +138,8 @@ fixed by `.env.example`.
 | Risk | Handling |
 |---|---|
 | **Committing a real secret.** The single highest-consequence failure here. | `.env` is already gitignored (pre-existing line). AC 2 asserts it explicitly, and the manual script re-checks `git status` after staging. `.env.example` is authored by hand, never copied from `.env`. |
-| Tests accidentally reading the developer's real `.env` and passing for the wrong reason. | `load_config()` takes an `env_file` parameter for exactly this. Every test uses `monkeypatch.delenv` on both keys plus a `tmp_path` env file — hermetic, no dependence on the machine. |
-| `load_dotenv(override=False)` leaking state between tests via `os.environ`. | `monkeypatch` restores `os.environ` after each test automatically. |
+| Tests accidentally reading the developer's real `.env` and passing for the wrong reason. | `load_config()` takes an `env_file` parameter for exactly this. Every test uses a `tmp_path` env file plus the `autouse` isolation fixture below. |
+| `load_dotenv(override=False)` leaking state between tests via `os.environ`. | **This risk landed — code review blocker B1.** The original mitigation ("`monkeypatch` restores `os.environ` automatically") was false: `monkeypatch.delenv(..., raising=False)` records an undo entry only when the variable was already *present*, so on a machine where it is unset nothing is recorded and values written during the test survive teardown. The suite was green here only because this shell exports `ANTHROPIC_BASE_URL` with a value that happened to match the assertion; with it unset, one test failed. Fixed with an `autouse` fixture that does `setenv` then `delenv`, forcing the prior state — including absence — to be recorded. Verified green with the vars unset, present, and set to a hostile value. |
 | Base URL points at a gateway rather than the public API, so the live manual check behaves unexpectedly. | The manual step reports the endpoint it actually hit, so a surprise is visible rather than silent. Whatever the value is, it is passed through untouched. |
 | src-layout package not importable in tests. | `uv sync` installs the project itself into `.venv`, so `import workout_bot` resolves. `uv run pytest` — not a bare `pytest` — is the command of record. |
 

@@ -4,24 +4,35 @@
 
 Written during `/implement` into `tests/test_config.py`. Run with `uv run pytest`.
 
-Every test is hermetic: it clears both variables from `os.environ` with
-`monkeypatch.delenv(..., raising=False)` and passes an explicit `env_file` written into
-`tmp_path`. **No test reads the developer's real `.env`** — otherwise a test could pass
-for the wrong reason on one machine and fail on another.
+Every test is hermetic: both variables are cleared from `os.environ` and any file input
+is written into `tmp_path`. **No test reads the developer's real `.env` or shell
+exports** — otherwise a test could pass for the wrong reason on one machine and fail on
+another.
 
-Shared fixture:
+The isolation fixture is `autouse`, and it does *not* use bare
+`monkeypatch.delenv(..., raising=False)`. That records an undo entry only when the
+variable was already present, so on a machine where these are unset it records nothing
+and whatever `load_config` writes during the test survives teardown into later tests.
+Setting first forces the prior state — including absence — to be recorded:
 
 ```python
+@pytest.fixture(autouse=True)
+def _isolated_env(monkeypatch):
+    for var in ("ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"):
+        monkeypatch.setenv(var, "")   # records prior state, incl. absence
+        monkeypatch.delenv(var)       # then start from truly-unset
+
 @pytest.fixture
-def env_file(tmp_path, monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+def env_file(tmp_path):
     def _write(text: str) -> str:
         p = tmp_path / ".env"
         p.write_text(text)
         return str(p)
     return _write
 ```
+
+`autouse` is what makes tests 10–11 trustworthy: they never touch a `.env`, so without it
+they read whatever a previous test or the developer's shell left in `os.environ`.
 
 | # | Test | Asserts | AC |
 |---|---|---|---|
@@ -36,6 +47,15 @@ def env_file(tmp_path, monkeypatch):
 | 9 | `test_repr_redacts_key` | secret string absent from both `repr(cfg)` and `str(cfg)`; `"redacted"` present | 11 |
 | 10 | `test_client_omits_base_url_when_none` | `build_client(Config(k, None))` → an `anthropic.Anthropic` whose `base_url` is the SDK default (`api.anthropic.com`) | 12 |
 | 11 | `test_client_passes_base_url_through` | `build_client(Config(k, "https://gw.example.com"))` → client `base_url` reflects it | 12 |
+| 12 | `test_blank_base_url_in_env_file_yields_sdk_default` | `.env` with `ANTHROPIC_BASE_URL=` → **through `load_config` then `build_client`** → client `base_url` is the real default, not `""` | 10, 12 |
+| 13 | `test_whitespace_base_url_in_env_file_yields_sdk_default` | same, with a whitespace-only value | 10, 12 |
+| 14 | `test_real_base_url_in_env_file_reaches_client` | same path, real value → reaches the client unchanged | 10, 12 |
+
+Tests 12–14 exist because 10 and 11 construct `Config` directly and so never exercise
+the `.env` → `os.environ` → SDK path. A blank `ANTHROPIC_BASE_URL=` line is written into
+`os.environ` by `load_dotenv`, and the SDK treats an empty string as a real endpoint —
+so the documented "leave it blank" onboarding path produced an unusable client while
+tests 10 and 11 stayed green. These three close that gap.
 
 Test 9 is the one worth writing carefully: assert on the **absence of the secret substring**,
 not on the presence of the word "redacted". A regression that reverts to the dataclass's
@@ -70,7 +90,7 @@ Expect: `IDENTICAL`, no diff output. — AC 1
 ```bash
 git check-ignore -v .env && git status --porcelain | grep -c '\.env$'
 ```
-Expect: a line showing `.gitignore:3:.env`, then `0`. A `0` count means no `.env` is staged
+Expect: a line showing `.gitignore:1:.env`, then `0`. A `0` count means no `.env` is staged
 or untracked-and-visible. If you see anything other than `0`, **stop and do not commit.** — AC 2
 
 **4. Confirm `.env.example` is safe to commit.**
@@ -119,8 +139,14 @@ appear in the output. — AC 11
 **8. Live check — the actual point of the whole spec.** Proves the ported credentials and
 endpoint really work. Needs network; costs a trivial number of tokens.
 
+⚠️ **Run it with `env -u ANTHROPIC_BASE_URL`, as written below.** This shell exports
+`ANTHROPIC_BASE_URL`, and per AC 8 an export beats the file — so without `env -u` you
+would send the `.env`'s key to whatever your shell points at rather than to the endpoint
+the `.env` specifies, and get a confusing auth failure that looks like a bad port. Check
+with `echo $ANTHROPIC_BASE_URL`; if it prints nothing, the `env -u` is harmless anyway.
+
 ```bash
-uv run python -c "
+env -u ANTHROPIC_BASE_URL uv run python -c "
 from workout_bot.config import load_config, build_client
 cfg = load_config()
 client = build_client(cfg)

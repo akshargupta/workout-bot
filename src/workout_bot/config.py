@@ -47,10 +47,15 @@ def _clean(value: str | None) -> str | None:
 def load_config(env_file: str | os.PathLike[str] | None = None) -> Config:
     """Load configuration from the environment, backfilled by a ``.env`` file.
 
+    Note that this mutates ``os.environ`` — both via ``load_dotenv`` and via the
+    blank-value normalization below. A second call with a different ``env_file``
+    in the same process therefore still sees the first file's values.
+
     Args:
-        env_file: Path to the file to read. Defaults to a ``.env`` discovered by
-            walking up from the current working directory. Tests pass an explicit
-            path so they never depend on the developer's real ``.env``.
+        env_file: Path to the file to read. Defaults to a ``.env`` located by
+            ``python-dotenv``'s own search, which starts at the calling module's
+            file rather than the working directory. Tests pass an explicit path so
+            they never depend on the developer's real ``.env``.
 
     Raises:
         MissingConfigError: If ``ANTHROPIC_API_KEY`` is absent or empty.
@@ -65,15 +70,24 @@ def load_config(env_file: str | os.PathLike[str] | None = None) -> Config:
             f"{API_KEY_VAR} is not set. Copy .env.example to .env and fill it in."
         )
 
-    return Config(api_key=api_key, base_url=_clean(os.environ.get(BASE_URL_VAR)))
+    base_url = _clean(os.environ.get(BASE_URL_VAR))
+    if base_url is None:
+        # `load_dotenv` has already written any blank value straight into
+        # os.environ, and the SDK's fallback chain only treats *absent* as
+        # "use the default" — an empty string is taken as a real base URL and
+        # yields a client that cannot reach anything. Delete it so the process
+        # environment agrees with the Config we return.
+        os.environ.pop(BASE_URL_VAR, None)
+
+    return Config(api_key=api_key, base_url=base_url)
 
 
 def build_client(config: Config) -> anthropic.Anthropic:
     """Build a Claude API client from validated configuration.
 
-    When ``base_url`` is ``None`` the argument is omitted entirely so the SDK
-    applies its own default — passing ``None`` explicitly is not the same thing.
+    Passing ``base_url=None`` is identical to omitting the argument: the SDK
+    normalizes ``None`` first, then falls back to ``ANTHROPIC_BASE_URL`` and
+    finally to its own default. ``load_config`` guarantees that variable is
+    absent rather than empty, so that fallback resolves correctly.
     """
-    if config.base_url is None:
-        return anthropic.Anthropic(api_key=config.api_key)
     return anthropic.Anthropic(api_key=config.api_key, base_url=config.base_url)

@@ -31,8 +31,15 @@ fill it in. Two variables, both read by [workout_bot.config](src/workout_bot/con
 Both are the Anthropic SDK's own environment variables. See
 [wiki/configuration.md](wiki/configuration.md) for how loading and precedence work.
 
-<!-- TODO: secrets, required env vars, runtime data dirs, and any gotchas that
-     would otherwise get "cleaned up" by a future session. -->
+Two gotchas that look like bugs and are not:
+
+- **An exported shell variable beats `.env`.** Deliberate — it lets CI and one-off
+  overrides work without editing the file. If a call goes somewhere unexpected, check
+  `echo $ANTHROPIC_BASE_URL` before suspecting `.env`.
+- **Blank is not the same as a value.** `load_config()` deletes a blank
+  `ANTHROPIC_BASE_URL` from the environment so the SDK's own default applies. Do not
+  "simplify" that away — the SDK reads an empty string as a real endpoint and the client
+  then fails every request.
 
 ## Knowledge base — OKF wiki
 

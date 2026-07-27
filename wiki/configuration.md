@@ -57,9 +57,23 @@ one-off `env VAR=… uv run …` override the file without editing it.
 
 - A blank `ANTHROPIC_API_KEY` raises `MissingConfigError` naming the variable, rather
   than sending an empty key and failing later with an opaque 401.
-- A blank `ANTHROPIC_BASE_URL` yields `None`, and `build_client()` then **omits the
-  argument entirely** so the SDK applies its own default. Passing `base_url=None`
-  explicitly is not equivalent, which is why the branch exists.
+- A blank `ANTHROPIC_BASE_URL` yields `None` **and is deleted from `os.environ`**.
+
+That deletion is load-bearing, and the reason is worth stating precisely. The SDK
+resolves the endpoint as:
+
+    base_url kwarg  >  ANTHROPIC_BASE_URL in the environment  >  https://api.anthropic.com
+
+Only an *absent* variable reaches that final default — an empty string is accepted as a
+real base URL. Since `load_dotenv` writes a blank `ANTHROPIC_BASE_URL=` line straight
+into `os.environ`, following `.env.example`'s "leave it empty for the public API"
+instruction would otherwise build a client pointed at `""`, which fails every request
+with an opaque connection error. Deleting the variable makes the process environment
+agree with the returned `Config`, so the SDK's own fallback fires.
+
+Passing `base_url=None` is exactly equivalent to omitting the argument — the SDK
+normalizes `None` before the environment lookup — so `build_client()` just passes the
+value straight through with no branch.
 
 ## Secrets
 
@@ -71,6 +85,11 @@ otherwise generate one that prints the key in full, so any log line, traceback, 
 echo of a `Config` would leak it. `str()` falls back to `__repr__`, so the single
 override covers both. A test asserts on the *absence of the secret substring*, so
 reverting to the generated repr fails the suite rather than passing quietly.
+
+The redaction covers representation, not extraction — `dataclasses.asdict(cfg)`,
+`astuple(cfg)`, and `vars(cfg)` all still return the key in clear. That is correct
+(code that asks for the field wants the field), but it means **never log a `Config`
+through `asdict`**; log the object itself.
 
 ## Related
 
