@@ -6,7 +6,7 @@ resource: ../src/workout_bot/config.py
 tags: [configuration, environment, runtime, secrets]
 generated:
   by: claude-code/claude-opus-5
-  at: 2026-07-27T12:31:58Z
+  at: 2026-07-27T12:58:00Z
 ---
 
 # Configuration and runtime

@@ -5,6 +5,7 @@ env file is written into tmp_path, so nothing here reads the developer's real .e
 """
 
 import dataclasses
+import os
 
 import anthropic
 import pytest
@@ -83,6 +84,17 @@ def test_missing_key_raises(env_file):
     assert "ANTHROPIC_API_KEY" in str(exc.value)
 
 
+# AC 10 — the blank-base-URL cleanup happens even when validation then fails,
+# so a caller that catches the error and builds a zero-arg client is not left
+# holding an empty ANTHROPIC_BASE_URL.
+def test_blank_base_url_cleaned_even_when_key_missing(env_file):
+    path = env_file("ANTHROPIC_BASE_URL=\n")
+    with pytest.raises(MissingConfigError):
+        load_config(path)
+    assert "ANTHROPIC_BASE_URL" not in os.environ
+    assert "api.anthropic.com" in str(anthropic.Anthropic(api_key="k").base_url)
+
+
 # AC 9 — empty key is treated as missing
 def test_empty_key_raises(env_file):
     with pytest.raises(MissingConfigError):
@@ -118,8 +130,8 @@ def test_repr_redacts_key(env_file):
     assert "redacted" in repr(config)
 
 
-# AC 12 — base_url omitted when None, so the SDK default applies
-def test_client_omits_base_url_when_none():
+# AC 12 — a None base_url resolves to the SDK default
+def test_client_uses_sdk_default_when_base_url_is_none():
     client = build_client(Config(api_key=SECRET, base_url=None))
     assert isinstance(client, anthropic.Anthropic)
     assert "api.anthropic.com" in str(client.base_url)

@@ -25,7 +25,13 @@ class MissingConfigError(RuntimeError):
 
 @dataclass(frozen=True)
 class Config:
-    """Validated configuration for talking to the Claude API."""
+    """Validated configuration for talking to the Claude API.
+
+    Build these with :func:`load_config`, not by hand. Beyond validating the
+    fields, it guarantees that a blank ``ANTHROPIC_BASE_URL`` is *absent* from
+    ``os.environ`` rather than empty — an invariant :func:`build_client` relies
+    on, and which a hand-constructed ``Config`` would not establish.
+    """
 
     api_key: str
     base_url: str | None
@@ -64,20 +70,22 @@ def load_config(env_file: str | os.PathLike[str] | None = None) -> Config:
     # over the same key in the file.
     load_dotenv(env_file, override=False)
 
+    # Normalize before validating. `load_dotenv` has already written any blank
+    # value straight into os.environ, and the SDK's fallback chain only treats
+    # *absent* as "use the default" — an empty string is taken as a real base
+    # URL and yields a client that cannot reach anything. This has to happen
+    # ahead of the api_key check: a caller that catches MissingConfigError and
+    # then builds a zero-arg `anthropic.Anthropic()` would otherwise inherit the
+    # blank value we failed to clean up.
+    base_url = _clean(os.environ.get(BASE_URL_VAR))
+    if base_url is None:
+        os.environ.pop(BASE_URL_VAR, None)
+
     api_key = _clean(os.environ.get(API_KEY_VAR))
     if api_key is None:
         raise MissingConfigError(
             f"{API_KEY_VAR} is not set. Copy .env.example to .env and fill it in."
         )
-
-    base_url = _clean(os.environ.get(BASE_URL_VAR))
-    if base_url is None:
-        # `load_dotenv` has already written any blank value straight into
-        # os.environ, and the SDK's fallback chain only treats *absent* as
-        # "use the default" — an empty string is taken as a real base URL and
-        # yields a client that cannot reach anything. Delete it so the process
-        # environment agrees with the Config we return.
-        os.environ.pop(BASE_URL_VAR, None)
 
     return Config(api_key=api_key, base_url=base_url)
 
