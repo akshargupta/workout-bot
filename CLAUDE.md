@@ -1,16 +1,35 @@
 # workout-bot
 
-<!-- TODO: one-line description of what this project is, once it exists. -->
-Founding spec: none yet — start with `/spec`.
+A workout bot built on the Claude Messages API.
+
+Founding spec: [001-port-env-config](specs/001-port-env-config/prd.md) — established the
+Python runtime and the API configuration contract.
 
 ## Commands
 
-<!-- TODO: fill in as soon as there is code. These commands ARE the definition of
-     "green" — /implement runs every one of them before handing work back. -->
+These commands ARE the definition of "green" — /implement runs every one of them
+before handing work back.
 
-- _(none yet)_ — until this list has entries, /implement has nothing to verify against.
+- `uv sync` — create/refresh `.venv` and install all dependencies (incl. dev)
+- `uv run pytest` — run the full test suite
+
+Always go through `uv run`; a bare `pytest` misses the project install and fails to
+import `workout_bot`.
 
 ## Environment
+
+Python 3.14.5, pinned in `.python-version` and managed by [uv](https://docs.astral.sh/uv/).
+
+Configuration lives in `.env` (gitignored, never committed) — copy `.env.example` and
+fill it in. Two variables, both read by [workout_bot.config](src/workout_bot/config.py):
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | yes | Claude API key |
+| `ANTHROPIC_BASE_URL` | no | API endpoint; empty means the public Claude API |
+
+Both are the Anthropic SDK's own environment variables. See
+[wiki/configuration.md](wiki/configuration.md) for how loading and precedence work.
 
 <!-- TODO: secrets, required env vars, runtime data dirs, and any gotchas that
      would otherwise get "cleaned up" by a future session. -->
