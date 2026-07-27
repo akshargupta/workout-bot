@@ -138,4 +138,69 @@ documents the `autouse` fixture and tests 12–14.
 
 ## Round 2 — commit `af1a634`
 
-_Awaiting re-review; appended on completion._
+**Verdict: APPROVE.** All three blockers verified fixed; 4 non-blocking nits introduced
+by the fixes. Report verbatim:
+
+Re-reviewed `git diff f428629..HEAD` in full and independently re-verified each fix rather than taking the summary on trust.
+
+### Blockers — confirmed resolved
+
+**B1 (env leak / non-hermetic suite) — resolved.** `/Users/akshargupta/Documents/workout-bot/tests/test_config.py:22-39`. I re-ran the env-state probe around every test: both variables are now `None` before *and* after all 14 tests, including `test_loads_both_values`, which was the leak source. Suite is green under five conditions, not the three claimed:
+
+| condition | result |
+|---|---|
+| shell as-is | 14 passed |
+| `env -u ANTHROPIC_BASE_URL -u ANTHROPIC_API_KEY` | 14 passed |
+| `ANTHROPIC_BASE_URL=https://evil.example.com` | 14 passed |
+| `ANTHROPIC_BASE_URL=` (exported blank) | 14 passed |
+| `ANTHROPIC_BASE_URL="   "` (exported whitespace) | 14 passed |
+
+The two blank/whitespace-export cases are the ones that would have caught a half-fix; they pass.
+
+**B2 (blank base URL → `base_url=""`) — resolved.** `/Users/akshargupta/Documents/workout-bot/src/workout_bot/config.py:73-80`. Verified end to end through `load_config` → `build_client` with a clean environment:
+
+```
+blank   cfg.base_url=None   env=None   client='https://api.anthropic.com'
+wspace  cfg.base_url=None   env=None   client='https://api.anthropic.com'
+absent  cfg.base_url=None   env=None   client='https://api.anthropic.com'
+real    cfg.base_url='https://gw.example.com'  client='https://gw.example.com'
+```
+
+Also checked the two cases the fix could plausibly have broken: an exported *blank* `ANTHROPIC_BASE_URL` is popped and yields the default; an exported *real* value still wins over the file (`https://exported.example.com`), so AC 8 precedence is intact. Tests 12-14 exercise the `.env` → `os.environ` → SDK path that 10-11 bypassed, and they fail against the old code path, so they are real regressions rather than decoration.
+
+**B3 (docs contradicting the SDK) — resolved.** `/Users/akshargupta/Documents/workout-bot/wiki/configuration.md:57-76` and the `build_client` docstring now state the actual chain — kwarg > `ANTHROPIC_BASE_URL` > `https://api.anthropic.com`, with `None` equivalent to omitting — which matches `anthropic/_client.py:224-232`. The dead branch is gone. `CLAUDE.md:34-42` and `.env.example:13-25` agree with the code, and the plan.md divergence note plus the corrected risk row are accurate accounts of what actually happened.
+
+Secrets re-checked after the delta: no `.env` value appears in `main...HEAD`, in `f428629..HEAD`, or in any tracked file; `git check-ignore` still exits 0; `git status --porcelain` count still 0; `.env` still byte-identical to the source.
+
+### Nits introduced by the fixes (none blocking)
+
+- `/Users/akshargupta/Documents/workout-bot/src/workout_bot/config.py:68-80` — the normalization sits *after* the `MissingConfigError` raise, so on the error path a blank `ANTHROPIC_BASE_URL` survives in `os.environ`. Verified: after the raise, `os.environ["ANTHROPIC_BASE_URL"] == ''`. A caller that catches the friendly error and then builds a zero-arg `anthropic.Anthropic()` (the pattern `.env.example:10-11` advertises) lands back in B2. Hoisting the `pop` above the api_key check closes it for free.
+- `/Users/akshargupta/Documents/workout-bot/src/workout_bot/config.py:85-93` — the "absent, not blank" invariant now lives in `load_config`, so `build_client` is only correct for a `Config` that came from it. Verified: a hand-built `Config(k, None)` in a process exporting a blank `ANTHROPIC_BASE_URL` still yields `base_url=''`. Unreachable in this spec (every production path goes through `load_config`, and test 10 is guarded by the autouse fixture), and the docstring says as much — but if a later spec constructs `Config` from a CLI flag the hazard returns. Worth one line on the `Config` class itself.
+- `tests/test_config.py:121` `test_client_omits_base_url_when_none` and tests.md row 10 — nothing is omitted any more; `None` is passed through. Cosmetic naming staleness.
+- `wiki/configuration.md` was materially corrected but `wiki/log.md` got no line and `generated.at` was not bumped. The wiki skill says append "for any meaningful add or change". Defensible here since the concept is new within the same unmerged spec and the log's "Creation" entry describes the final state.
+
+On the deliberate non-change: agreed, keep the extra CLAUDE.md content. AC 14 sets a floor, not a ceiling, and the two gotchas you added under Environment are exactly the kind of thing a future session would otherwise "clean up". Not flagging again.
+
+### Acceptance criteria
+
+1 met · 2 met · 3 met · 4 met · 5 met · 6 met · 7 met · 8 met (re-verified after the `pop`) · 9 met · 10 met · 11 met · 12 **now met** (was the B2 failure) · 13 **now met** (green in five environment configurations, was failing on any clean machine) · 14 met · 15 met, and the concept is now factually correct.
+
+---
+
+## Round 2 resolution — commit `cef3b3c`
+
+All four nits addressed:
+
+1. **Latent B2 re-entry (the one that mattered).** The `os.environ.pop` was hoisted above
+   the `api_key` validation, so cleanup happens even when validation then fails. Test 15,
+   `test_blank_base_url_cleaned_even_when_key_missing`, asserts the variable is gone after
+   the raise *and* that a subsequent zero-arg client resolves to the real default.
+2. **Invariant documented on `Config` itself**, warning against hand-construction.
+3. **`test_client_omits_base_url_when_none` renamed** to
+   `test_client_uses_sdk_default_when_base_url_is_none`.
+4. **`generated.at` bumped** on `wiki/configuration.md`. The log line was left as the
+   single "Creation" entry, per the reviewer's own note that it describes the final state
+   of a concept created within this one unmerged spec.
+
+15 tests, verified green under all five environment conditions the reviewer used:
+shell as-is, both vars unset, hostile exported value, exported blank, exported whitespace.
