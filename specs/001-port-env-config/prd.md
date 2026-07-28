@@ -1,9 +1,10 @@
 # 001 — Port .env config and stand up the Python runtime
 
-Status: Implemented — awaiting human review
+Status: Done
 Date: 2026-07-27
 Approved: 2026-07-27
 Implemented: 2026-07-27 (branch `spec/001-port-env-config`; review in [review.md](review.md))
+Signed off: 2026-07-28 (verdict in [signoff.md](signoff.md); merged to `main`)
 Source: [source.md](source.md) (backlog item `2026-07-27-port-env-from-original-folder`)
 
 ## Problem / motivation
