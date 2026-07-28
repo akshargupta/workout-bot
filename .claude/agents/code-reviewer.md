@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Reviews a spec branch's diff against its spec (prd.md acceptance criteria, plan.md, tests.md). Launched automatically at the end of /implement and after non-trivial /feedback fixes. Read-only — it reports, it never edits.
+description: Reviews a spec branch's diff against its spec (prd.md acceptance criteria, plan.md, tests.md). Launched automatically at the end of /implement and after non-trivial /signoff fixes. Read-only — it reports, it never edits.
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
