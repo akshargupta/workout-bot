@@ -12,8 +12,8 @@ Files, in the order they appear:
 | `plan.md` | `/spec` | the how — files, sequence, risks, what's deferred |
 | `tests.md` | `/spec` | automated tests + a manual script the human runs by hand |
 | `review.md` | `code-reviewer` agent | end of `/implement`, saved verbatim |
-| `feedback.md` | `/feedback` | the human's verdict, verbatim, dated |
+| `signoff.md` | `/signoff` | the human's verdict, verbatim, dated |
 
 `prd.md` status ladder: `Draft → Approved → Implemented — awaiting human review → Done`
 (or `Rejected`). Nothing is implemented before `Approved`; nothing merges to `main`
-before sign-off in `/feedback`.
+before sign-off in `/signoff`.
