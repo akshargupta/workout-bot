@@ -39,7 +39,7 @@ All non-trivial work follows this cycle:
 backlog/ item ──▶ /spec ──▶ human approves prd ──▶ /implement ──▶ code-reviewer agent
      ▲                                                                    │
      │                                                       human reads diff + review.md,
-     └──── new-scope items ◀── /feedback ◀─────────────────── runs manual script in tests.md
+     └──── new-scope items ◀── /signoff ◀──────────────────── runs manual script in tests.md
                     (merge on sign-off)
 ```
 
@@ -50,11 +50,11 @@ Rules — these override default behavior:
 2. **Trivial fixes** (typo-level, no behavior change) may skip the cycle, but say
    explicitly that the cycle is being skipped.
 3. Every spec lives in `specs/NNN-slug/`: `prd.md` + `plan.md` + `tests.md`,
-   joined after implementation by `review.md` and `feedback.md`.
+   joined after implementation by `review.md` and `signoff.md`.
    Statuses: `Draft → Approved → Implemented — awaiting human review → Done`
    (or `Rejected`).
 4. Implementation happens on branch `spec/NNN-slug`. Merge to main only in
-   /feedback, after human sign-off — never during /implement.
+   /signoff, after human sign-off — never during /implement.
 5. The `code-reviewer` agent reviews every /implement before human handoff; its
    report is saved to the spec dir. Findings get fixed or explicitly rebutted,
    never silently dropped.

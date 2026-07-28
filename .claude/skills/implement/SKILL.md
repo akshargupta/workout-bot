@@ -40,6 +40,6 @@ Implementation progress:
    - `git diff main...HEAD --stat`, plus the command to see the full diff
    - the reviewer's verdict line and blocking/nit counts (full report is in review.md)
    - the **Manual script** section of tests.md, verbatim
-   - closing line: "When you've reviewed, run `/feedback specs/NNN-<slug> <verdict + notes>`"
+   - closing line: "When you've reviewed, run `/signoff specs/NNN-<slug> <verdict + notes>`"
 
-Never merge to main here. Merging happens only in /feedback after human sign-off.
+Never merge to main here. Merging happens only in /signoff after human sign-off.

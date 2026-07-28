@@ -1,7 +1,7 @@
 ---
 type: Playbook
 title: Spec-driven development loop
-description: The backlog → spec → approve → implement → review → feedback cycle used in this repo.
+description: The backlog → spec → approve → implement → review → signoff cycle used in this repo.
 resource: ../CLAUDE.md
 tags: [workflow, process, skills]
 generated:
@@ -28,7 +28,7 @@ All non-trivial work follows a human-gated cycle. Rules of record live in
    `/wiki`, commit, then run the
    **[code-reviewer](../.claude/agents/code-reviewer.md)** agent → `review.md`.
 5. **Human reviews** — read the diff and `review.md`, run the manual script.
-6. **`/feedback`** — in-scope fixes land on the branch; new-scope requests become
+6. **`/signoff`** — in-scope fixes land on the branch; new-scope requests become
    fresh `backlog/` files (feeding step 1). On sign-off, merge to `main`,
    `Status: Done`.
 
@@ -39,7 +39,7 @@ All non-trivial work follows a human-gated cycle. Rules of record live in
 ## Invariants
 
 - Never implement from a `Draft` spec.
-- Merge to `main` happens only in `/feedback`, after human sign-off — never
+- Merge to `main` happens only in `/signoff`, after human sign-off — never
   during `/implement`.
 - Acceptance criteria are the single contract judged by code, tests, and review.
 - New ideas go to `backlog/`, not straight into code.

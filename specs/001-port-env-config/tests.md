@@ -174,4 +174,4 @@ in `wiki/`. — AC 14, 15
 
 ---
 
-Then read the diff and `review.md`, and run `/feedback` with your verdict.
+Then read the diff and `review.md`, and run `/signoff` with your verdict.

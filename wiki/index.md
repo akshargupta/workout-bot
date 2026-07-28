@@ -15,4 +15,4 @@ context. Authoring conventions live in [CLAUDE.md](../CLAUDE.md).
 
 ## Playbooks
 
-* [Spec-driven development loop](spec-workflow.md) - the backlog → spec → approve → implement → review → feedback cycle used in this repo.
+* [Spec-driven development loop](spec-workflow.md) - the backlog → spec → approve → implement → review → signoff cycle used in this repo.
