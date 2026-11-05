@@ -2,3 +2,9 @@
 .venv/
 __pycache__/
 .pytest_cache/
+# model weights, checkpoints and outputs pulled back from Colab
+outputs/
+*.safetensors
+*.bin
+*.pt
+*.gguf
