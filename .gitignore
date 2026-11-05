@@ -1,4 +1,8 @@
+.ipynb_checkpoints/
 .env
-.venv/
+# model weights / outputs downloaded from Colab
+*.safetensors
+*.bin
+*.pt
+*.gguf
 __pycache__/
-.pytest_cache/

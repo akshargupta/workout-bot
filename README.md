@@ -1,17 +1,20 @@
-# workout-bot
+# local-model
 
-A workout-logging bot built on the [Claude Messages API](https://docs.anthropic.com/en/api/messages).
+Notebooks for running and fine-tuning AI models on a **Google Colab** GPU.
 
-Early stage: the Python runtime and API configuration are in place, the bot
-itself is not built yet.
+## How to run one
 
-## Setup
+1. Tap a notebook link below (sign in with your Google account that has Colab).
+   If Colab can't find it, the repo is private — authorize GitHub when it asks.
+2. *Runtime → Change runtime type* → pick a GPU (T4 works; L4 / A100 are faster).
+3. *Runtime → Run all*.
 
-Requires Python 3.14+ and [uv](https://docs.astral.sh/uv/).
+On a phone, switch the browser to *Desktop site* if Colab's menus are missing, and keep the tab
+in front while it runs.
 
-```bash
-uv sync
-cp .env.example .env
-```
+## Notebooks
 
-Then add your [Claude API key](https://console.anthropic.com/settings/keys) to `.env`.
+| Notebook | What it does |
+|---|---|
+| [Run a model](https://colab.research.google.com/github/akshargupta/workout-bot/blob/local-model/notebooks/run_a_model.ipynb) | Downloads an open chat model (Qwen3-4B by default) to the GPU and lets you chat with it |
+| [Text in boxes](https://colab.research.google.com/github/akshargupta/workout-bot/blob/local-model/notebooks/text_in_boxes.ipynb) | MOSS-Image: give a scene + boxes of exact text / objects, get an image with each placed in its box. **A100** (or L4) |
