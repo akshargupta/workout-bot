@@ -15,7 +15,15 @@ kernel, and launch long training jobs without touching the notebook.
                                                                       └─ /content/work/project  (your pushed code)
 ```
 
-## One-time setup
+## Notebooks — open and run in Colab
+
+No setup needed: open one, pick a GPU runtime, *Runtime → Run all*.
+
+| Notebook | What it does |
+|---|---|
+| [Run a model](https://colab.research.google.com/github/akshargupta/workout-bot/blob/local-model/notebooks/run_a_model.ipynb) | Downloads an open chat model (Qwen3-4B by default) to the GPU and lets you chat with it |
+
+## Bridge: one-time setup
 
 1. **ngrok** (free): sign up at https://ngrok.com, then copy
    - your authtoken — https://dashboard.ngrok.com/get-started/your-authtoken

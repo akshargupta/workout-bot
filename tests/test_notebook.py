@@ -28,3 +28,13 @@ def test_notebook_code_cells_compile():
         # drop IPython-only lines (!shell, %%magic) before compiling as plain Python
         lines = [l for l in cell["source"] if not l.lstrip().startswith(("!", "%"))]
         compile("".join(lines), "<cell>", "exec")
+
+
+def test_all_notebooks_are_valid_and_compile():
+    for path in sorted((ROOT / "notebooks").glob("*.ipynb")):
+        nb = json.loads(path.read_text())
+        for cell in nb["cells"]:
+            if cell["cell_type"] == "code":
+                assert cell["outputs"] == [], f"{path.name}: commit notebooks without outputs"
+                lines = [l for l in cell["source"] if not l.lstrip().startswith(("!", "%"))]
+                compile("".join(lines), f"{path.name}", "exec")

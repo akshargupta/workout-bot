@@ -21,4 +21,6 @@ for the architecture and setup.
   ships torch and transformers.
 - Colab's disk is ephemeral. Put checkpoints and anything worth keeping under
   `/content/drive/MyDrive/local-model/` (when Drive is mounted) or fetch them with `colab get`.
+- Notebooks the user runs by hand go in `notebooks/`: committed without outputs, runnable top to
+  bottom with *Run all*, settings in a cell near the top, and a link added to the README table.
 - Never print, log or commit BRIDGE_TOKEN / COLAB_TOKEN / HF tokens.
