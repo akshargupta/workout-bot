@@ -17,3 +17,4 @@ in front while it runs.
 | Notebook | What it does |
 |---|---|
 | [Run a model](https://colab.research.google.com/github/akshargupta/workout-bot/blob/local-model/notebooks/run_a_model.ipynb) | Downloads an open chat model (Qwen3-4B by default) to the GPU and lets you chat with it |
+| [Text in boxes](https://colab.research.google.com/github/akshargupta/workout-bot/blob/local-model/notebooks/text_in_boxes.ipynb) | MOSS-Image: give a scene + boxes of exact text / objects, get an image with each placed in its box. **A100** (or L4) |
